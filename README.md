@@ -28,7 +28,7 @@ kind: AgentRuntime
 metadata:
   name: claude-code-v2-1-280
 spec:
-  image: docker.io/fooman/sympozium-harness-claude@sha256:d29a44746954c035c8271ebb80660b0fa1381398e00e5cf675d63e5f539c8467
+  image: docker.io/fooman/sympozium-harness-claude@sha256:aeb2fe107a5fee176901a2246b1ca98e036ccf5884b86cf5c01152a4bc34d1e9
   contractVersion: v1alpha1
   capabilities: [persona, toolFilter]
   supportOwner: platform@example.com
@@ -297,9 +297,9 @@ docker build -t sympozium-harness-claude:dev .
 releases, and a flag whose meaning shifted still produces a run that succeeds. `--build-arg
 INSTALL_GIT=false` drops ~79MB if the agent does not need git.
 
-`scripts/release.sh <tag>` publishes: it runs the checks, pushes both architectures, reruns
-`image` and `conformance` against the pushed digest, and records that digest everywhere this repo
-names it.
+`scripts/release.sh <tag>` publishes: it bumps the base image to the current `trixie-slim`, runs
+the checks, pushes both architectures, reruns `image` and `conformance` against the pushed digest,
+and records that digest everywhere this repo names it. `BUMP_BASE=0` keeps the pinned base.
 
 Claude Code itself is Anthropic's software, © Anthropic PBC, and its use is subject to
 [Anthropic's legal agreements](https://code.claude.com/docs/en/legal-and-compliance). This repo

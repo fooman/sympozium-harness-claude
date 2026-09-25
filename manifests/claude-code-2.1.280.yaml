@@ -16,7 +16,7 @@
 #            allowUnmetered: true     # required for every harness image today
 #          imagePolicy:
 #            allowedRegistries:
-#              - docker.io/fooman/sympozium-harness-claude@sha256:d29a44746954c035c8271ebb80660b0fa1381398e00e5cf675d63e5f539c8467
+#              - docker.io/fooman/sympozium-harness-claude@sha256:aeb2fe107a5fee176901a2246b1ca98e036ccf5884b86cf5c01152a4bc34d1e9
 #
 #   2. The digest below is one your operator has reviewed. To build and
 #      publish your own instead:
@@ -41,7 +41,7 @@ spec:
   # Digest-pinned, and required to be: a tag-only reference is rejected by the
   # admission webhook and again by the controller. In harness mode the image is
   # not an accessory to the run, it is the agent process.
-  image: docker.io/fooman/sympozium-harness-claude@sha256:d29a44746954c035c8271ebb80660b0fa1381398e00e5cf675d63e5f539c8467
+  image: docker.io/fooman/sympozium-harness-claude@sha256:aeb2fe107a5fee176901a2246b1ca98e036ccf5884b86cf5c01152a4bc34d1e9
 
   # Checked by the image at startup, which refuses anything else, absent
   # included, through the result contract.

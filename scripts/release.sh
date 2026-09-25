@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Build, verify, publish and roll out a new adapter image.
 #
+#   0. bump the Dockerfile's base image to the current debian:trixie-slim
+#      index digest, so every release picks up Debian's security updates; the
+#      steps below then build and verify on that base
 #   1. ./verify.sh args and contract (no docker)
 #   2. build and push a linux/amd64 + linux/arm64 image to Docker Hub, and
 #      pull it back
@@ -20,6 +23,7 @@
 #   NAMESPACE   namespace of the AgentRuntime (default: default)
 #   RUNTIME     AgentRuntime name (default: claude-code-v2-1-280)
 #   SKIP_TESTS  set to 1 to skip every verify.sh stage
+#   BUMP_BASE   set to 0 to keep the base image the Dockerfile pins
 set -euo pipefail
 
 # Docker Hub user or org the image is published under.
@@ -43,6 +47,27 @@ step() { printf '\n==> %s\n' "$*"; }
 shopt -s nullglob
 recorded=(README.md CONFORMANCE.md manifests/*.yaml examples/*.yaml)
 shopt -u nullglob
+
+if [ "${BUMP_BASE:-1}" != 0 ]; then
+  step "base image: latest debian:trixie-slim"
+  # The multi-architecture index digest, which is what the Dockerfile pins:
+  # amd64 and arm64 builds both resolve through it.
+  latest="$(docker buildx imagetools inspect debian:trixie-slim --format '{{.Manifest.Digest}}')"
+  [[ "$latest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "could not resolve debian:trixie-slim: $latest" >&2; exit 1; }
+  current="$(sed -n 's/^ARG RUNTIME_IMAGE=debian:trixie-slim@//p' Dockerfile)"
+  [[ "$current" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "Dockerfile has no ARG RUNTIME_IMAGE=debian:trixie-slim@sha256:... line" >&2; exit 1; }
+  if [ "$current" = "$latest" ]; then
+    echo "already current: $latest"
+  else
+    tmp="$(mktemp)"
+    sed "s|^ARG RUNTIME_IMAGE=debian:trixie-slim@$current\$|ARG RUNTIME_IMAGE=debian:trixie-slim@$latest|" Dockerfile > "$tmp"
+    grep -qx "ARG RUNTIME_IMAGE=debian:trixie-slim@$latest" "$tmp" || { rm -f "$tmp"; echo "could not rewrite the base image line" >&2; exit 1; }
+    cat "$tmp" > Dockerfile
+    rm -f "$tmp"
+    echo "bumped: $current"
+    echo "    to: $latest"
+  fi
+fi
 
 if [ "${SKIP_TESTS:-0}" != 1 ]; then
   step "verify: args, contract"

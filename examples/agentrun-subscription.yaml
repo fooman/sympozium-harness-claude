@@ -61,7 +61,7 @@ spec:
     allowUnmetered: true
   imagePolicy:
     allowedRegistries:
-      - docker.io/fooman/sympozium-harness-claude@sha256:d29a44746954c035c8271ebb80660b0fa1381398e00e5cf675d63e5f539c8467
+      - docker.io/fooman/sympozium-harness-claude@sha256:aeb2fe107a5fee176901a2246b1ca98e036ccf5884b86cf5c01152a4bc34d1e9
 ---
 # 2. THE RUNTIME
 #
@@ -74,7 +74,7 @@ metadata:
 spec:
   # Digest-pinned, and required to be. This must match the allowedRegistries
   # entry above as written.
-  image: docker.io/fooman/sympozium-harness-claude@sha256:d29a44746954c035c8271ebb80660b0fa1381398e00e5cf675d63e5f539c8467
+  image: docker.io/fooman/sympozium-harness-claude@sha256:aeb2fe107a5fee176901a2246b1ca98e036ccf5884b86cf5c01152a4bc34d1e9
   contractVersion: v1alpha1
 
   # WHAT THIS IMAGE HONOURS. Sympozium did not build the image and cannot
