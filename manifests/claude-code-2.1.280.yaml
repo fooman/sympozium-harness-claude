@@ -1,0 +1,69 @@
+# The AgentRuntime for this adapter, on its own.
+#
+# This is the one object an operator applies to make the adapter selectable:
+# no Agent, no run, no credential. examples/agentrun-subscription.yaml is the
+# same runtime shown in context, with the policy, an Agent and a run around it.
+#
+# Two things have to be true before this can be applied, and both are
+# deliberately separate actions. Installing an adapter must not widen image
+# admission or hand out a model credential:
+#
+#   1. The namespace's SympoziumPolicy admits this exact digest:
+#
+#        spec:
+#          harnessPolicy:
+#            enabled: true
+#            allowUnmetered: true     # required for every harness image today
+#          imagePolicy:
+#            allowedRegistries:
+#              - docker.io/fooman/sympozium-harness-claude@sha256:d29a44746954c035c8271ebb80660b0fa1381398e00e5cf675d63e5f539c8467
+#
+#   2. The digest below is one your operator has reviewed. To build and
+#      publish your own instead:
+#
+#        docker buildx build --platform linux/amd64,linux/arm64 --push \
+#          -t <your-registry>/sympozium-harness-claude:<tag> .
+#        docker buildx imagetools inspect <image>:<tag> --format '{{.Manifest.Digest}}'
+#
+#      Replace it here, in README.md, and in examples/, which must all match as
+#      written, because the allowlist is a plain string prefix with no parsing.
+#
+# The runtime becomes selectable once it reports Ready:
+#
+#   kubectl -n <namespace> apply -f manifests/claude-code-2.1.280.yaml
+#   kubectl -n <namespace> get agentruntime claude-code-v2-1-280 \
+#     -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}{"\n"}'
+apiVersion: sympozium.ai/v1alpha1
+kind: AgentRuntime
+metadata:
+  name: claude-code-v2-1-280
+spec:
+  # Digest-pinned, and required to be: a tag-only reference is rejected by the
+  # admission webhook and again by the controller. In harness mode the image is
+  # not an accessory to the run, it is the agent process.
+  image: docker.io/fooman/sympozium-harness-claude@sha256:d29a44746954c035c8271ebb80660b0fa1381398e00e5cf675d63e5f539c8467
+
+  # Checked by the image at startup, which refuses anything else, absent
+  # included, through the result contract.
+  contractVersion: v1alpha1
+
+  # Everything this image honours. `spec.systemPrompt` is appended to Claude
+  # Code's system prompt. `spec.toolPolicy` becomes Claude Code's own --tools
+  # and --disallowedTools, which remove tools from the model's context rather
+  # than prompting for them. README.md says what each name maps to.
+  capabilities:
+    - persona
+    - toolFilter
+
+  # The runtime's default routing. A run may still state its own; this is what
+  # an ordinary string-form run on a bound Agent inherits.
+  model:
+    provider: anthropic
+    model: claude-sonnet-5
+    authSecretRef: claude-subscription
+
+  supportOwner: https://github.com/fooman/sympozium-harness-claude/issues
+  conformance:
+    status: pending
+    owner: fooman
+    reference: https://github.com/fooman/sympozium-harness-claude/blob/main/CONFORMANCE.md

@@ -1,0 +1,184 @@
+# Running Claude Code inside Sympozium on a Claude subscription: a complete,
+# minimal example.
+# -----------------------------------------------------------------------------
+#
+# Sympozium normally runs its own agent loop (`agent-runner`) as the pod's
+# primary process. `task.mode: harness` replaces that process with someone
+# else's agent harness, while the workspace PVC, SkillPack tools, response
+# gates, retries and the run-detail UI keep working, because the result
+# contract is unchanged.
+#
+# The harness here is Claude Code, fronted by an adapter image that maps
+# Sympozium's task contract onto `claude -p`:
+#   https://code.claude.com                         (the harness)
+#   the adapter's README                            (how the mapping works)
+#   Sympozium docs/modes/harness-adapters.md        (the contract both sides implement)
+#
+# This file is four objects: the policy that permits harness mode at all, the
+# runtime, an Agent bound to both, and the run. Create the credential first,
+# then apply it:
+#
+#   claude setup-token        # on a machine logged in to Claude; prints sk-ant-oat01-...
+#   printf 'Token: '; read -rs CLAUDE_TOKEN; echo
+#   kubectl create secret generic claude-subscription \
+#     --from-literal=ANTHROPIC_API_KEY="$CLAUDE_TOKEN"
+#   unset CLAUDE_TOKEN
+#   kubectl apply -f examples/agentrun-subscription.yaml
+#   kubectl logs -f -l sympozium.ai/agent-run=claude-demo -c agent
+#
+# Copy the token that `claude setup-token` prints in the terminal, not the
+# code the browser shows during login. That code is single-use and fails as
+# "401 Invalid bearer token".
+#
+# An Anthropic API key works under the same Secret key; the adapter tells the
+# two apart.
+#
+# Requires Sympozium v0.10.51 or later: `harnessPolicy.allowUnmetered` below
+# is v0.10.51, and without it a harness run is denied at admission.
+---
+# 1. PERMITTING HARNESS MODE, AND BOUNDING WHICH IMAGES MAY RUN
+#
+# `harnessPolicy.enabled` is the opt-in. Harness mode replaces the trusted
+# primary process and hands it the run's model credential, so it fails closed:
+# an Agent with no `policyRef`, or one bound to a policy that omits this, is
+# denied at admission.
+#
+# `harnessPolicy.allowUnmetered` is required for every harness image today.
+# This adapter does report real token usage, but Sympozium cannot check an
+# external harness's numbers, and on a subscription there is no per-token bill
+# to meter anyway.
+#
+# `imagePolicy.allowedRegistries` bounds *which* image. It matches by plain
+# string prefix, so the entry below is the full digest: `docker.io/fooman`
+# with no slash would also admit `docker.io/fooman-evil/...`.
+apiVersion: sympozium.ai/v1alpha1
+kind: SympoziumPolicy
+metadata:
+  name: claude-demo-policy
+spec:
+  harnessPolicy:
+    enabled: true
+    allowUnmetered: true
+  imagePolicy:
+    allowedRegistries:
+      - docker.io/fooman/sympozium-harness-claude@sha256:d29a44746954c035c8271ebb80660b0fa1381398e00e5cf675d63e5f539c8467
+---
+# 2. THE RUNTIME
+#
+# The administrator-owned half. Everything a run would otherwise have to
+# assert about the image is asserted once, here.
+apiVersion: sympozium.ai/v1alpha1
+kind: AgentRuntime
+metadata:
+  name: claude-code-v2-1-280
+spec:
+  # Digest-pinned, and required to be. This must match the allowedRegistries
+  # entry above as written.
+  image: docker.io/fooman/sympozium-harness-claude@sha256:d29a44746954c035c8271ebb80660b0fa1381398e00e5cf675d63e5f539c8467
+  contractVersion: v1alpha1
+
+  # WHAT THIS IMAGE HONOURS. Sympozium did not build the image and cannot
+  # inspect it, so this declaration is the entire basis on which a run is
+  # admitted.
+  #
+  # `persona`: spec.systemPrompt is appended to Claude Code's system prompt.
+  # `toolFilter`: spec.toolPolicy becomes --tools and --disallowedTools, which
+  # remove tools from the model's context. Claude Code tool names (Bash, Read,
+  # Edit, WebFetch, ...) are used as-is, and agent-runner's names are mapped.
+  capabilities:
+    - persona
+    - toolFilter
+
+  # The runtime's default routing, which a string-form run on a bound Agent
+  # inherits. No baseURL: the adapter talks to api.anthropic.com unless told
+  # otherwise, and a subscription token is never sent anywhere else.
+  model:
+    provider: anthropic
+    model: claude-sonnet-5
+    authSecretRef: claude-subscription
+
+  supportOwner: https://github.com/fooman/sympozium-harness-claude/issues
+  conformance:
+    status: pending
+    owner: fooman
+    reference: https://github.com/fooman/sympozium-harness-claude/blob/main/CONFORMANCE.md
+---
+# 3. THE AGENT
+#
+# `runtimeRef` binds the runtime, so even this Agent's ordinary string-form
+# runs (schedules, channels, New Run) reach Claude Code rather than
+# agent-runner.
+#
+# `authRefs` is not optional. A harness run may use only a model credential
+# the backing Agent declares: the harness receives the credential as an
+# environment variable, so the Agent, not the run author, is the authority
+# that grants it.
+apiVersion: sympozium.ai/v1alpha1
+kind: Agent
+metadata:
+  name: claude-demo
+spec:
+  policyRef: claude-demo-policy
+  runtimeRef: claude-code-v2-1-280
+  authRefs:
+    - provider: anthropic
+      secret: claude-subscription
+  agents:
+    # `default` is a fixed, required key in the CRD, unrelated to the run's
+    # `agentId`.
+    default:
+      model: claude-sonnet-5
+---
+# 4. THE RUN
+apiVersion: sympozium.ai/v1alpha1
+kind: AgentRun
+metadata:
+  name: claude-demo
+spec:
+  agentRef: claude-demo
+  agentId: primary
+  sessionKey: claude-demo-001
+
+  task:
+    mode: harness
+    parameters:
+      # The runtime supplies the image and the capability declaration. With
+      # runtimeRef on the Agent this line is redundant; it is spelled out
+      # because a run that names its runtime is a run you can read.
+      runtime: claude-code-v2-1-280
+
+      # Object-form tasks carry no top-level prompt, so harness mode takes the
+      # task text from here. The adapter hands it to Claude Code on stdin.
+      prompt: |
+        Read the files in /workspace and write a one-paragraph summary of what
+        this project does. If the directory is empty, say so plainly.
+
+      # Extra `claude` flags, as a JSON array string. They go after the
+      # adapter's own, so the run author can override them.
+      args: '["--max-turns","20"]'
+
+  # Requested `persona`, and the runtime declares it. Not inherited from the
+  # Agent: SYSTEM_PROMPT comes from this field alone.
+  systemPrompt: |
+    You are a careful technical writer. Prefer plain sentences over adjectives,
+    and say when you are unsure rather than guessing.
+
+  # Requested `toolFilter`, and the runtime declares it. This run can read and
+  # search but not run commands or reach the web. Bash can read the run's
+  # credential from its environment, so deny it for untrusted input.
+  toolPolicy:
+    deny:
+      - Bash
+      - WebFetch
+      - WebSearch
+
+  model:
+    # Claude Code only speaks the Anthropic API, so the adapter refuses any
+    # other provider rather than send the run somewhere it cannot work.
+    provider: anthropic
+    model: claude-sonnet-5
+    # Must also appear in the Agent's `authRefs` above.
+    authSecretRef: claude-subscription
+
+  timeout: "15m"
+  cleanup: delete

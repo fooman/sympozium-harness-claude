@@ -1,0 +1,66 @@
+# Build the adapter and run every check that needs no credential.
+#
+# The point is the digest an operator is asked to approve. An adapter image is
+# the agent process, so "it built" is not evidence. These stages are what say
+# the build still maps Sympozium's contract onto the pinned Claude Code, and
+# the upstream fixture is what says a contract-compatible image can be told
+# apart from one that merely starts.
+#
+# Publishing stays a deliberate, manual step (scripts/release.sh): pushing
+# needs registry credentials, and the digest that comes out of it has to be
+# recorded in CONFORMANCE.md, manifests/ and the examples before anyone can
+# use it.
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      # bash + jq only: the generated invocation, and the result contract's
+      # own semantics against stub harnesses.
+      - name: args
+        run: ./verify.sh args
+      - name: contract
+        run: ./verify.sh contract
+
+      # CLAUDE_CODE_VERSION is left at the Dockerfile's pinned default on
+      # purpose. A build that floats to a new upstream release is a different
+      # agent, and bumping it should be a commit that runs these checks.
+      - name: build
+        run: docker build -t sympozium-harness-claude:ci .
+
+      # The real Claude Code against a dead endpoint: its own init event says
+      # whether the model, the tool filter and the MCP entry arrived.
+      - name: image
+        run: ./verify.sh image sympozium-harness-claude:ci
+
+      # The container boundary: UID 1000, read-only root, no TTY, a refused
+      # contract version, the skip marker, the same boot on tmpfs, and SIGTERM.
+      - name: conformance
+        run: ./verify.sh conformance sympozium-harness-claude:ci
+
+      # The fixture from sympozium-ai/harness-adapters, unmodified. An adapter
+      # that reported success without reaching a model would pass everything
+      # above and fail here.
+      #
+      # Pinned to a commit rather than to main, and checked against the hash of
+      # what was reviewed. This step downloads a script and runs it, so tracking
+      # a branch would let a push in another repository change what CI executes
+      # here. Bumping the pin is a commit, the same as bumping
+      # CLAUDE_CODE_VERSION.
+      - name: upstream contract smoke
+        env:
+          SMOKE_COMMIT: 0d8f50c4be0c9ba2eeba1f68b9d4bab902793ef0
+          SMOKE_SHA256: 3f2302f50b9a8742b39cd0554b8e591c735a0446dc6c0b05190c855e94321904
+        run: |
+          curl -fsSLO "https://raw.githubusercontent.com/sympozium-ai/harness-adapters/${SMOKE_COMMIT}/test/contract-smoke.sh"
+          echo "${SMOKE_SHA256}  contract-smoke.sh" | sha256sum -c -
+          sh contract-smoke.sh claude-code sympozium-harness-claude:ci

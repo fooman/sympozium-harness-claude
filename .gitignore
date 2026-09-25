@@ -1,0 +1,7 @@
+# Deployment files rendered for one cluster (digests, namespaces, Secrets
+# names) stay local. Only the public example is tracked.
+examples/*
+!examples/agentrun-subscription.yaml
+build-meta.json
+*.bak
+.DS_Store
