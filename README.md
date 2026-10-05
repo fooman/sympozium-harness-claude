@@ -26,9 +26,9 @@ restate none of it.
 apiVersion: sympozium.ai/v1alpha1
 kind: AgentRuntime
 metadata:
-  name: claude-code-v2-1-280
+  name: claude-code-v2-1-289
 spec:
-  image: docker.io/fooman/sympozium-harness-claude@sha256:aeb2fe107a5fee176901a2246b1ca98e036ccf5884b86cf5c01152a4bc34d1e9
+  image: docker.io/fooman/sympozium-harness-claude@sha256:d832af456fbf98c31d6a359867d736c87094d37263b2c665cad524d4af9cb25b
   contractVersion: v1alpha1
   capabilities: [persona, toolFilter]
   supportOwner: platform@example.com
@@ -38,7 +38,7 @@ spec:
 task:
   mode: harness
   parameters:
-    runtime: claude-code-v2-1-280
+    runtime: claude-code-v2-1-289
     prompt: "Summarise what /workspace contains."
 ```
 
@@ -110,6 +110,19 @@ entry that ends at the full digest admits one artifact. An empty list means no r
 
 The digest in this README, in `examples/` and in `manifests/` is the latest published image.
 `scripts/release.sh` updates all of them together when it publishes a new one.
+
+Two versions can run side by side. Each `manifests/claude-code-<version>.yaml` is its own
+`AgentRuntime`, with its own name and digest, and `allowedRegistries` is a list:
+
+```yaml
+imagePolicy:
+  allowedRegistries:
+    - docker.io/fooman/sympozium-harness-claude@sha256:<digest of 2.1.289>
+    - docker.io/fooman/sympozium-harness-claude@sha256:<digest of 2.1.289>
+```
+
+Apply both manifests and each Agent runs the version its `runtimeRef` names. Move one Agent to
+the new runtime first, and the rest once it has run.
 
 Sympozium records what ran on the AgentRun's status. `harnessImageDigest` is the image that
 executed, and `harnessRuntimeRef`, `harnessContractVersion` and `harnessRuntimeSource` say which
@@ -245,7 +258,7 @@ docker run --rm -e SYMPOZIUM_HARNESS_CONTRACT_VERSION=v1alpha1 … <image>
 The pod log shows one line per event worth watching, and never model text or tool input:
 
 ```
-harness/claude-code: 2.1.280 (Claude Code) model=claude-sonnet-5 auth=subscription
+harness/claude-code: 2.1.289 (Claude Code) model=claude-sonnet-5 auth=subscription
 harness/claude-code > session model=claude-sonnet-5 tools=12 mcp=sympozium-skills:connected
 harness/claude-code > tool Bash
 harness/claude-code > tool Edit
@@ -264,7 +277,7 @@ do that, and it removes the workspace copy once read so a leftover never skips t
 The gates are the ones
 [sympozium-ai/harness-adapters](https://github.com/sympozium-ai/harness-adapters) asks an adapter to
 pass before publication, and **[CONFORMANCE.md](CONFORMANCE.md)** records what this adapter claims
-against them and what was run to prove it. `manifests/claude-code-2.1.280.yaml` is the
+against them and what was run to prove it. `manifests/claude-code-2.1.289.yaml` is the
 `AgentRuntime` on its own.
 
 ## Build and check
@@ -297,9 +310,20 @@ docker build -t sympozium-harness-claude:dev .
 releases, and a flag whose meaning shifted still produces a run that succeeds. `--build-arg
 INSTALL_GIT=false` drops ~79MB if the agent does not need git.
 
-`scripts/release.sh <tag>` publishes: it bumps the base image to the current `trixie-slim`, runs
-the checks, pushes both architectures, reruns `image` and `conformance` against the pushed digest,
-and records that digest everywhere this repo names it. `BUMP_BASE=0` keeps the pinned base.
+`scripts/release.sh` publishes, and takes no arguments:
+
+- It bumps the base image to the current `trixie-slim` and Claude Code to npm's `latest`.
+  `BUMP_BASE=0` and `BUMP_CLAUDE=0` keep the pinned ones, and `CLAUDE_CODE_VERSION=2.1.285`
+  (or a dist-tag such as `stable`) pins a specific release.
+- It picks the tag itself: `v<claude-code-version>-<n>`, one build number above the highest
+  already on Docker Hub for that version.
+- It runs `args` and `contract`, then `image` on a local candidate before anything is pushed.
+  After the push it reruns `image` and `conformance` against the pushed digest.
+- It records that digest everywhere this repo names the current image. On a new Claude Code
+  version it adds `manifests/claude-code-<version>.yaml` and leaves the earlier manifests as
+  they were, digest included, so two versions can be compared.
+
+`DRY_RUN=1 scripts/release.sh` prints the bumps and the tag and changes nothing.
 
 Claude Code itself is Anthropic's software, © Anthropic PBC, and its use is subject to
 [Anthropic's legal agreements](https://code.claude.com/docs/en/legal-and-compliance). This repo

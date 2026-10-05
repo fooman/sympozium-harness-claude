@@ -34,4 +34,4 @@ mv "$tmp" Dockerfile
 grep -E '^ARG CLAUDE_CODE_' Dockerfile
 echo
 echo "Next: docker build -t sympozium-harness-claude:dev . && ./verify.sh image sympozium-harness-claude:dev"
-echo "Then rename the AgentRuntime (manifests/, examples/, README.md) to the new version."
+echo "scripts/release.sh does all of this, and adds the new version's manifest."

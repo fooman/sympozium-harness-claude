@@ -12,9 +12,9 @@ This is evidence for that contract. It is not an endorsement by Anthropic.
 
 | | |
 |---|---|
-| Image | `docker.io/fooman/sympozium-harness-claude:v2.1.280-5` |
-| Digest | `docker.io/fooman/sympozium-harness-claude@sha256:aeb2fe107a5fee176901a2246b1ca98e036ccf5884b86cf5c01152a4bc34d1e9` |
-| Upstream | Claude Code `2.1.280`, the native linux binary from `@anthropic-ai/claude-code-linux-{x64,arm64}`, pinned as the `CLAUDE_CODE_VERSION` default and checked against npm's published SHA-512 |
+| Image | `docker.io/fooman/sympozium-harness-claude:v2.1.289-1` |
+| Digest | `docker.io/fooman/sympozium-harness-claude@sha256:d832af456fbf98c31d6a359867d736c87094d37263b2c665cad524d4af9cb25b` |
+| Upstream | Claude Code `2.1.289`, the native linux binary from `@anthropic-ai/claude-code-linux-{x64,arm64}`, pinned as the `CLAUDE_CODE_VERSION` default and checked against npm's published SHA-512 |
 | Base | `debian:trixie-slim`, pinned by index digest, so a rebuild months later is the same image |
 | Contract | `v1alpha1`, checked at startup and refused if it is anything else |
 | Runs as | UID 1000, read-only root filesystem, `/workspace` |
