@@ -61,7 +61,7 @@ spec:
     allowUnmetered: true
   imagePolicy:
     allowedRegistries:
-      - docker.io/fooman/sympozium-harness-claude@sha256:d832af456fbf98c31d6a359867d736c87094d37263b2c665cad524d4af9cb25b
+      - docker.io/fooman/sympozium-harness-claude@sha256:df683140474a62c4aeec3cb22f7232e0e86e34c1fdf5391eacf842db1d1391aa
 ---
 # 2. THE RUNTIME
 #
@@ -70,11 +70,11 @@ spec:
 apiVersion: sympozium.ai/v1alpha1
 kind: AgentRuntime
 metadata:
-  name: claude-code-v2-1-289
+  name: claude-code-v2-1-308
 spec:
   # Digest-pinned, and required to be. This must match the allowedRegistries
   # entry above as written.
-  image: docker.io/fooman/sympozium-harness-claude@sha256:d832af456fbf98c31d6a359867d736c87094d37263b2c665cad524d4af9cb25b
+  image: docker.io/fooman/sympozium-harness-claude@sha256:df683140474a62c4aeec3cb22f7232e0e86e34c1fdf5391eacf842db1d1391aa
   contractVersion: v1alpha1
 
   # WHAT THIS IMAGE HONOURS. Sympozium did not build the image and cannot
@@ -119,7 +119,7 @@ metadata:
   name: claude-demo
 spec:
   policyRef: claude-demo-policy
-  runtimeRef: claude-code-v2-1-289
+  runtimeRef: claude-code-v2-1-308
   authRefs:
     - provider: anthropic
       secret: claude-subscription
@@ -145,7 +145,7 @@ spec:
       # The runtime supplies the image and the capability declaration. With
       # runtimeRef on the Agent this line is redundant; it is spelled out
       # because a run that names its runtime is a run you can read.
-      runtime: claude-code-v2-1-289
+      runtime: claude-code-v2-1-308
 
       # Object-form tasks carry no top-level prompt, so harness mode takes the
       # task text from here. The adapter hands it to Claude Code on stdin.

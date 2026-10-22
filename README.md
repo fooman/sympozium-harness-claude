@@ -26,9 +26,9 @@ restate none of it.
 apiVersion: sympozium.ai/v1alpha1
 kind: AgentRuntime
 metadata:
-  name: claude-code-v2-1-289
+  name: claude-code-v2-1-308
 spec:
-  image: docker.io/fooman/sympozium-harness-claude@sha256:d832af456fbf98c31d6a359867d736c87094d37263b2c665cad524d4af9cb25b
+  image: docker.io/fooman/sympozium-harness-claude@sha256:df683140474a62c4aeec3cb22f7232e0e86e34c1fdf5391eacf842db1d1391aa
   contractVersion: v1alpha1
   capabilities: [persona, toolFilter]
   supportOwner: platform@example.com
@@ -38,7 +38,7 @@ spec:
 task:
   mode: harness
   parameters:
-    runtime: claude-code-v2-1-289
+    runtime: claude-code-v2-1-308
     prompt: "Summarise what /workspace contains."
 ```
 
@@ -117,8 +117,8 @@ Two versions can run side by side. Each `manifests/claude-code-<version>.yaml` i
 ```yaml
 imagePolicy:
   allowedRegistries:
-    - docker.io/fooman/sympozium-harness-claude@sha256:<digest of 2.1.289>
-    - docker.io/fooman/sympozium-harness-claude@sha256:<digest of 2.1.289>
+    - docker.io/fooman/sympozium-harness-claude@sha256:<digest of 2.1.308>
+    - docker.io/fooman/sympozium-harness-claude@sha256:<digest of 2.1.308>
 ```
 
 Apply both manifests and each Agent runs the version its `runtimeRef` names. Move one Agent to
@@ -258,7 +258,7 @@ docker run --rm -e SYMPOZIUM_HARNESS_CONTRACT_VERSION=v1alpha1 … <image>
 The pod log shows one line per event worth watching, and never model text or tool input:
 
 ```
-harness/claude-code: 2.1.289 (Claude Code) model=claude-sonnet-5 auth=subscription
+harness/claude-code: 2.1.308 (Claude Code) model=claude-sonnet-5 auth=subscription
 harness/claude-code > session model=claude-sonnet-5 tools=12 mcp=sympozium-skills:connected
 harness/claude-code > tool Bash
 harness/claude-code > tool Edit
@@ -277,7 +277,7 @@ do that, and it removes the workspace copy once read so a leftover never skips t
 The gates are the ones
 [sympozium-ai/harness-adapters](https://github.com/sympozium-ai/harness-adapters) asks an adapter to
 pass before publication, and **[CONFORMANCE.md](CONFORMANCE.md)** records what this adapter claims
-against them and what was run to prove it. `manifests/claude-code-2.1.289.yaml` is the
+against them and what was run to prove it. `manifests/claude-code-2.1.308.yaml` is the
 `AgentRuntime` on its own.
 
 ## Build and check

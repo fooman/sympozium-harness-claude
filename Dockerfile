@@ -29,7 +29,7 @@
 # CLAUDE_CODE_VERSION. scripts/release.sh does it as its first step, so every
 # release builds on the current Debian point release. Get a current one with:
 #   docker buildx imagetools inspect debian:trixie-slim --format '{{.Manifest.Digest}}'
-ARG RUNTIME_IMAGE=debian:trixie-slim@sha256:a99cfc517144bc59b1978475ec53b46ecabec7e43635402ee5b77cc54cd1b20a
+ARG RUNTIME_IMAGE=debian:trixie-slim@sha256:62bd423aeee912639ca8ee681c2b762cb3e25137e0a92b20be455898a9f034ad
 
 # ── stage 1: fetch and verify the pinned binary ─────────────────────────────
 FROM ${RUNTIME_IMAGE} AS harness
@@ -44,9 +44,9 @@ FROM ${RUNTIME_IMAGE} AS harness
 # builds of the same source a different agent, and the digest an operator
 # approved would stop meaning anything. Bumping it is a commit, and
 # `./verify.sh image` is what says whether the bump still maps.
-ARG CLAUDE_CODE_VERSION=2.1.289
-ARG CLAUDE_CODE_SHA512_X64=236dd2692604f2f4b015b27e4dcd26465cef26645035a8b20545cafcae51e8156bda53a809d308d92251e0deb1895632eb2c88b77f49362caf3c7a223b29b2cb
-ARG CLAUDE_CODE_SHA512_ARM64=93364a82694f8edc5e0a5de347878ef81570cb8849abfa40a41daf58582b8c0191d633a98614ba189694d578d96066c92134a879a5b11e70f5c50d8459564b1f
+ARG CLAUDE_CODE_VERSION=2.1.308
+ARG CLAUDE_CODE_SHA512_X64=7df52bc9ebe91fb3ce4ad3c9ff1a54239475a3361b1fda3f0db87fc4f4a6c9525e8442e744c6664677a37509aad137a3396fd26cd9c9161086320c08b0ea854d
+ARG CLAUDE_CODE_SHA512_ARM64=c6d4f609dee7fb264df4f8966d61da65ff70db961f955fbb54e5f92013c1fc8584aca64586cb2ddbf032d6d4a0abf333a75be9e7ac70151a8f6ba50023d05923
 ARG TARGETARCH
 
 RUN apt-get update \
